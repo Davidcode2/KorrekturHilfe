@@ -7,30 +7,15 @@ from PIL import Image
 import sys
 import numpy as np
 
-# filePath = "/home/jakob/OneDrive/HochschuleAA/bachelor-2/WS21/AuD2/Altklausuren/Algo Prüfung 21-22.pdf"
-# filePath = "/home/jakob/OneDrive/HochschuleAA/bachelor-2/SS22/Rechnernetze/Altklausuren/Lingel_Korr_2.pdf"
-# filePath = "/home/jakob/OneDrive/HochschuleAA/bachelor-2/SS22/Rechnernetze/Altklausuren/Ostermann_Korrektur.pdf"
-# filePath = "/home/jakob/OneDrive/HochschuleAA/bachelor-2/SS22/Rechnernetze/Aufschrieb.pdf"
-
 def main():
-    image = getImage()
-    viewedImage = cv2.imread(image)
-    stringContentOfImage = getStringContentOfImage(viewedImage)
+    imagePath = getImagePath()
+    readImage = cv2.imread(imagePath)
+    preppedImg = toGreyscaleForPytesseract(readImage)
+
+    stringContentOfImage = getStringContentOfImage(preppedImg)
     print(stringContentOfImage)
 
-    img_gray = cv2.cvtColor(viewedImage, cv2.COLOR_BGR2GRAY)
-    ret, im = cv2.threshold(img_gray, 100, 255, cv2.THRESH_BINARY_INV)
-    contours, hierarchy  = cv2.findContours(im, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contoursObj = Contours(viewedImage, contours)
-    img = cv2.drawContours(im, contours, -1, (70,7,80), 2)
-
-    show_image(img)
-
-    #findShapes(contours)
-    #drawBorders(contours)
-
-    contoursObj.findShapesAndDrawBorders()
-
+def readMultiplePages():
     try:
         doc = convert_from_path(filePath)
         for page_number, page_data in enumerate(doc):
@@ -38,6 +23,26 @@ def main():
             print("Page # {} - {}".format(str(page_number),txt))
     except:
         print("error")
+
+def findContours(readImage, im):
+    contours, hierarchy  = cv2.findContours(im, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contoursObj = Contours(viewedImage, contours)
+    img = cv2.drawContours(im, contours, -1, (70,7,80), 2)
+    show_image(img)
+
+def toGreyscaleForPytesseract(readImage):
+    gray = cv2.cvtColor(readImage, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    cv2.imshow('thresh', thresh)
+    cv2.waitKey()
+    return thresh
+
+def toGreyscale(readImage):
+    img_gray = cv2.cvtColor(readImage, cv2.COLOR_BGR2GRAY)
+    ret, im = cv2.threshold(img_gray, 100, 255, cv2.THRESH_BINARY_INV)
+    cv2.imshow('thresh', im)
+    cv2.waitKey()
+    return im
 
 def checkArguments():
     if len(sys.argv) == 1:
@@ -50,13 +55,12 @@ def checkPath():
     return True
 
 def getStringContentOfImage(viewedImage):
-    print("searching content of ", str(sys.argv[1]))
-
+    print("searching content of", str(sys.argv[1]))
     # use the below for images
-    string = pytesseract.image_to_string(viewedImage)
+    string = pytesseract.image_to_string(viewedImage, lang="deu")
     return string
 
-def getImage():
+def getImagePath():
     if not checkArguments():
         return False
 
@@ -130,12 +134,12 @@ class Contours():
 
 def reduceImageToColor(img):
     imghsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    lower_blue = np.array([110,50,50])
-    upper_blue = np.array([130,255,255])
-    mask_blue = cv2.inRange(imghsv, lower_blue, upper_blue)
-    _, contours, _ = cv2.findContours(mask_blue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    lower_red = np.array([50,50,140])
+    upper_red = np.array([0,0,255])
+    mask_red = cv2.inRange(imghsv, lower_red, upper_red)
+    _, contours, _ = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     im = np.copy(img)
     cv2.drawContours(im, contours, -1, (0, 255, 0), 1)
-    cv2.imwrite("contours_blue.png", im)
+    show_image(im)
 
 main()
